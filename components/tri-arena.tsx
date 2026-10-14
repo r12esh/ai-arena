@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
@@ -131,10 +130,10 @@ const PromptInputBar = memo(function PromptInputBar({
   const isTextEmpty = !text.trim();
 
   return (
-    <footer className="flex-none bg-zinc-950/80 backdrop-blur-md px-4 py-3.5 max-w-5xl mx-auto w-full">
+    <footer className="flex-none bg-zinc-950/80 backdrop-blur-md px-4 pt-0 pb-3.5 max-w-5xl mx-auto w-full">
       <form onSubmit={handleSubmit} className="relative w-full">
         {/* Rounded container with 20px border-radius, subtle border, and focus-within ring */}
-        <div className="relative flex flex-col justify-end w-full rounded-[20px] bg-zinc-900/80 border border-zinc-800/90 shadow-lg shadow-black/20 transition-all duration-150 focus-within:ring-2 focus-within:ring-indigo-500/40 focus-within:border-indigo-500/50">
+        <div className="relative flex flex-col justify-end w-full rounded-[15px] bg-zinc-900/80 border border-zinc-800/90 shadow-lg shadow-black/20 transition-all duration-150 focus-within:ring-2 focus-within:ring-indigo-500/40 focus-within:border-indigo-500/50">
           <textarea
             ref={textareaRef}
             value={text}
@@ -443,6 +442,16 @@ export function TriArena() {
     await saveSession(updated);
   }, []);
 
+  // Dynamically update browser tab title based on open chat session
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    if (currentSession?.title && currentSession.title !== "New Conversation") {
+      document.title = `${currentSession.title} — AI Tri-Arena`;
+    } else {
+      document.title = "AI Tri-Arena — 3-Model Live Comparison";
+    }
+  }, [currentSession?.title]);
+
   const handleNewChat = useCallback(async () => {
     abortControllersRef.current.forEach((c) => c?.abort());
 
@@ -610,7 +619,32 @@ export function TriArena() {
   const handleScrollToBottomExplicit = useCallback((colIdx: number) => {
     const el = scrollContainersRef.current[colIdx];
     if (el) {
-      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      const start = el.scrollTop;
+      const target = el.scrollHeight - el.clientHeight;
+      const distance = target - start;
+
+      if (distance <= 0) {
+        el.scrollTop = target;
+      } else {
+        const duration = 180; // Fast, snappy scroll in ms
+        const startTime = performance.now();
+
+        const step = (now: number) => {
+          const elapsed = now - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          // Ease-out cubic: 1 - (1 - t)^3
+          const easeOut = 1 - Math.pow(1 - progress, 3);
+          el.scrollTop = start + distance * easeOut;
+
+          if (progress < 1) {
+            requestAnimationFrame(step);
+          } else {
+            el.scrollTop = target;
+          }
+        };
+
+        requestAnimationFrame(step);
+      }
     }
     isAtBottomRef.current[colIdx] = true;
     setShowScrollDown((prev) => {
@@ -1199,7 +1233,7 @@ export function TriArena() {
                   />
                 )}
 
-                <Card
+                <div
                   className={`relative flex flex-col h-full bg-zinc-900/40 border border-zinc-800/90 rounded-xl overflow-hidden shadow-sm backdrop-blur-sm [contain:layout_paint_style] transition-colors duration-150 min-w-0 ${
                     isResizingColumns ? "pointer-events-none select-none" : ""
                   } ${
@@ -1364,7 +1398,7 @@ export function TriArena() {
                     onClick={() => handleScrollToBottomExplicit(idx)}
                     aria-label={`Scroll column ${idx + 1} to bottom`}
                     title="Scroll to bottom"
-                    className="absolute right-4 bottom-10 z-20 w-8 h-8 rounded-full bg-zinc-800/90 hover:bg-zinc-750 text-zinc-200 hover:text-white border border-zinc-700/80 shadow-lg shadow-black/40 backdrop-blur-md flex items-center justify-center transition-all duration-150 animate-in fade-in zoom-in-90 hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-450"
+                    className="absolute left-1/2 -translate-x-1/2 bottom-10 z-20 w-8 h-8 rounded-full bg-zinc-800/90 hover:bg-zinc-750 text-zinc-200 hover:text-white border border-zinc-700/80 shadow-lg shadow-black/40 backdrop-blur-md flex items-center justify-center transition-all duration-150 animate-in fade-in zoom-in-90 hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-450"
                   >
                     <ArrowDown className="w-4 h-4 stroke-[2.25]" />
                   </button>
@@ -1383,7 +1417,7 @@ export function TriArena() {
                       : "Ready"}
                   </span>
                 </div>
-              </Card>
+              </div>
             </React.Fragment>
           );
         })}
