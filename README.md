@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Tri-Arena — 3-Way AI Model Comparison
 
-## Getting Started
+A lightweight, high-performance Next.js application for comparing 3 AI models head-to-head in real time:
+- **Column 1:** Groq model (e.g. `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`)
+- **Column 2:** Groq model (e.g. `mixtral-8x7b-32768`, `gemma2-9b-it`)
+- **Column 3:** Google AI Studio model (e.g. `gemini-2.0-flash`, `gemini-1.5-flash`)
 
-First, run the development server:
+All 3 models stream responses concurrently from a single bottom prompt input with zero database dependency and no history storage.
+
+---
+
+## Features
+
+- **3-Way Parallel Streaming:** Submitting one prompt calls all 3 models simultaneously via Server-Sent Events (SSE).
+- **Zero Database / Pure Stateless:** No database, no local storage history, and no saved logs.
+- **Provider Adapters:**
+  - Groq via OpenAI-compatible Chat Completions
+  - Google AI Studio via native Gemini REST SSE streaming
+- **Resilient Columns:** If one model fails or hits quota limits, the other two continue streaming unaffected.
+- **Per-Column Model Switcher:** Switch models for any column on the fly.
+- **Interactive UI:**
+  - One bottom prompt composer with auto-expansion, keyboard shortcut (`Enter` to send, `Shift+Enter` for new line)
+  - Quick example prompt starter chips
+  - Stop button to abort active generations mid-stream
+  - Copy response button with feedback toast
+  - Live elapsed time & token/character counters
+
+---
+
+## Quick Setup
+
+### 1. Environment Variables
+
+Create a `.env.local` file in the project root (see `.env.example`):
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Groq API Key (Powers Columns 1 & 2)
+GROQ_API_KEY=gsk_your_groq_api_key_here
+
+# Google AI Studio API Key (Powers Column 3)
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+*(Optional model list customizations)*:
+```bash
+GROQ_MODELS=llama-3.3-70b-versatile,llama-3.1-8b-instant,mixtral-8x7b-32768,gemma2-9b-it
+GEMINI_MODELS=gemini-2.0-flash,gemini-1.5-flash,gemini-1.5-pro
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 2. Install & Run
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npm run dev
+```
 
-## Learn More
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Production Build
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run build
+npm run start
+```
