@@ -1,10 +1,10 @@
 // ============================================================
 // Server-only: Multi-provider streaming AI client
-// Supports Groq (OpenAI-compatible) and Google AI Studio (Gemini)
+// Supports Ollama Cloud, Groq (OpenAI-compatible) and Google AI Studio (Gemini)
 // Supports multi-turn conversational context
 // ============================================================
 import "server-only";
-import { getProvider } from "./providers";
+import { getProvider, ProviderId } from "./providers";
 
 const REQUEST_TIMEOUT_MS = 60_000;
 const MAX_TOKENS = 4096;
@@ -25,7 +25,7 @@ export interface ChatMessageParam {
  * Supports multi-turn conversation messages or a single prompt string.
  */
 export async function* streamModelResponse(
-  providerId: "groq" | "google",
+  providerId: ProviderId,
   modelId: string,
   promptOrMessages: string | ChatMessageParam[]
 ): AsyncGenerator<StreamEvent> {
@@ -37,10 +37,15 @@ export async function* streamModelResponse(
   }
 
   if (!provider.apiKey || provider.apiKey.trim().length === 0) {
-    const envKeyName = providerId === "groq" ? "GROQ_API_KEY" : "GEMINI_API_KEY";
+    const envKeyName =
+      providerId === "ollama"
+        ? "OLLAMA_API_KEY"
+        : providerId === "groq"
+        ? "GROQ_API_KEY"
+        : "GEMINI_API_KEY";
     yield {
       type: "error",
-      error: `${provider.name} is not configured. Please set ${envKeyName} in your .env.local file.`,
+      error: `${provider.name} is not configured. Please set ${envKeyName} in your .env file.`,
     };
     return;
   }
@@ -59,9 +64,9 @@ export async function* streamModelResponse(
   }
 
   try {
-    if (providerId === "groq") {
+    if (providerId === "groq" || providerId === "ollama") {
       // -------------------------------------------------------------
-      // Groq: OpenAI-compatible Chat Completions with messages array
+      // OpenAI-compatible Chat Completions (Groq & Ollama Cloud)
       // -------------------------------------------------------------
       const res = await fetch(`${provider.baseUrl}/chat/completions`, {
         method: "POST",
@@ -83,16 +88,25 @@ export async function* streamModelResponse(
 
       if (!res.ok) {
         const errorText = await res.text().catch(() => "Unknown error");
-        const safeError = errorText.replace(/Bearer\s+[a-zA-Z0-9_\-]+/gi, "Bearer [REDACTED]");
+        let safeError = errorText.replace(/Bearer\s+[a-zA-Z0-9_\-.]+/gi, "Bearer [REDACTED]");
+        try {
+          const parsed = JSON.parse(safeError);
+          if (parsed.error?.message) {
+            safeError = parsed.error.message;
+          }
+        } catch {
+          // Keep safeError as is
+        }
+
         yield {
           type: "error",
-          error: `Groq error (${res.status}): ${safeError.slice(0, 300)}`,
+          error: `${provider.name} error (${res.status}): ${safeError.slice(0, 350)}`,
         };
         return;
       }
 
       if (!res.body) {
-        yield { type: "error", error: "Groq returned an empty response body." };
+        yield { type: "error", error: `${provider.name} returned an empty response body.` };
         return;
       }
 

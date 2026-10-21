@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect, useCallback, memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
@@ -13,7 +12,6 @@ import { toast } from "sonner";
 import {
   Copy,
   Check,
-  Send,
   Square,
   RotateCcw,
   AlertTriangle,
@@ -49,14 +47,14 @@ interface ModelOption {
 }
 
 interface ProviderMeta {
-  id: "groq" | "google";
+  id: "ollama" | "groq" | "google";
   name: string;
   configured: boolean;
   models: ModelOption[];
 }
 
 interface LiveColumnState {
-  provider: "groq" | "google";
+  provider: "ollama" | "groq" | "google";
   providerName: string;
   selectedModel: string;
   streamingText: string;
@@ -323,12 +321,12 @@ export function TriArena() {
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
   const [isSessionLoading, setIsSessionLoading] = useState(true);
 
-  // 3 Columns Live State
+  // 3 Columns Live State: Col 1 = Ollama (Cloud), Col 2 = Groq, Col 3 = Google AI Studio
   const [columns, setColumns] = useState<[LiveColumnState, LiveColumnState, LiveColumnState]>([
     {
-      provider: "groq",
-      providerName: "Groq",
-      selectedModel: "openai/gpt-oss-20b",
+      provider: "ollama",
+      providerName: "Ollama (Cloud)",
+      selectedModel: "gemma4:31b",
       streamingText: "",
       status: "idle",
       durationMs: 0,
@@ -344,7 +342,7 @@ export function TriArena() {
     {
       provider: "google",
       providerName: "Google AI Studio",
-      selectedModel: "gemini-3.8-flash",
+      selectedModel: "gemini-3.5-flash-lite",
       streamingText: "",
       status: "idle",
       durationMs: 0,
@@ -373,29 +371,33 @@ export function TriArena() {
       try {
         const res = await fetch("/api/models");
         let initialModels: [string, string, string] = [
-          "openai/gpt-oss-20b",
+          "gemma4:31b",
           "qwen/qwen3.8-27b",
-          "gemini-3.8-flash",
+          "gemini-3.5-flash-lite",
         ];
 
+        let fetchedProviders: ProviderMeta[] = [];
         if (res.ok) {
           const data = await res.json();
           if (data.providers) {
+            fetchedProviders = data.providers;
             setProviders(data.providers);
 
+            const ollama = data.providers.find((p: ProviderMeta) => p.id === "ollama");
             const groq = data.providers.find((p: ProviderMeta) => p.id === "groq");
             const google = data.providers.find((p: ProviderMeta) => p.id === "google");
 
             initialModels = [
-              groq?.models?.find((m: ModelOption) => m.id === "openai/gpt-oss-20b")?.id ||
-                groq?.models?.[0]?.id ||
-                "openai/gpt-oss-20b",
+              ollama?.models?.find((m: ModelOption) => m.id === "gemma4:31b")?.id ||
+                ollama?.models?.[0]?.id ||
+                "gemma4:31b",
               groq?.models?.find((m: ModelOption) => m.id === "qwen/qwen3.8-27b")?.id ||
-                groq?.models?.[1]?.id ||
+                groq?.models?.find((m: ModelOption) => m.id === "openai/gpt-oss-20b")?.id ||
+                groq?.models?.[0]?.id ||
                 "qwen/qwen3.8-27b",
-              google?.models?.find((m: ModelOption) => m.id === "gemini-3.8-flash")?.id ||
+              google?.models?.find((m: ModelOption) => m.id === "gemini-3.5-flash-lite")?.id ||
                 google?.models?.[0]?.id ||
-                "gemini-3.8-flash",
+                "gemini-3.5-flash-lite",
             ];
 
             setColumns((prev) => [
@@ -413,10 +415,33 @@ export function TriArena() {
           const latest = storedSessions[0];
           setCurrentSessionId(latest.id);
           setCurrentSession(latest);
+
+          const ollamaProvider = fetchedProviders.find((p) => p.id === "ollama");
+          const groqProvider = fetchedProviders.find((p) => p.id === "groq");
+          const googleProvider = fetchedProviders.find((p) => p.id === "google");
+
           setColumns((prev) => [
-            { ...prev[0], selectedModel: latest.columnModels?.[0] || prev[0].selectedModel },
-            { ...prev[1], selectedModel: latest.columnModels?.[1] || prev[1].selectedModel },
-            { ...prev[2], selectedModel: latest.columnModels?.[2] || prev[2].selectedModel },
+            {
+              ...prev[0],
+              selectedModel:
+                ollamaProvider?.models?.some((m) => m.id === latest.columnModels?.[0])
+                  ? latest.columnModels[0]
+                  : initialModels[0],
+            },
+            {
+              ...prev[1],
+              selectedModel:
+                groqProvider?.models?.some((m) => m.id === latest.columnModels?.[1])
+                  ? latest.columnModels[1]
+                  : initialModels[1],
+            },
+            {
+              ...prev[2],
+              selectedModel:
+                googleProvider?.models?.some((m) => m.id === latest.columnModels?.[2])
+                  ? latest.columnModels[2]
+                  : initialModels[2],
+            },
           ]);
         } else {
           const newSession = createEmptySession(initialModels);
@@ -971,28 +996,40 @@ export function TriArena() {
     }
   }, []);
 
-  const getModelsForProvider = (providerId: "groq" | "google") => {
+  const getModelsForProvider = (providerId: "ollama" | "groq" | "google") => {
     const p = providers.find((item) => item.id === providerId);
     if (!p || p.models.length === 0) {
+      if (providerId === "ollama") {
+        return [
+          { id: "gemma4:31b", displayName: "Gemma 4 31B" },
+          { id: "gpt-oss:20b", displayName: "GPT-OSS 20B" },
+          { id: "gpt-oss:120b", displayName: "GPT-OSS 120B" },
+          { id: "nemotron-3-nano:30b", displayName: "Nemotron 3 Nano 30B" },
+          { id: "nemotron-3-super", displayName: "Nemotron 3 Super" },
+          { id: "nemotron-3-ultra", displayName: "Nemotron 3 Ultra" },
+          { id: "beam", displayName: "Beam" },
+        ];
+      }
       if (providerId === "groq") {
         return [
+          { id: "qwen/qwen3.8-27b", displayName: "Qwen 3.8 27B" },
           { id: "openai/gpt-oss-20b", displayName: "GPT-OSS 20B" },
           { id: "openai/gpt-oss-120b", displayName: "GPT-OSS 120B" },
-          { id: "qwen/qwen3.8-27b", displayName: "Qwen 3.8 27B" },
           { id: "allam-2-7b", displayName: "ALLaM 2 7B" },
         ];
       }
       return [
+        { id: "gemini-3.5-flash-lite", displayName: "Gemini 3.5 Flash-Lite" },
+        { id: "gemini-3.8-flash", displayName: "Gemini 3.8 Flash" },
         { id: "gemini-3.5-flash", displayName: "Gemini 3.5 Flash" },
         { id: "gemini-3.6-flash", displayName: "Gemini 3.6 Flash" },
-        { id: "gemini-3.8-flash", displayName: "Gemini 3.8 Flash" },
         { id: "gemini-4-argon", displayName: "Gemini 4 Argon" },
-        { id: "gemini-3.5-flash-lite", displayName: "Gemini 3.5 Flash-Lite" },
       ];
     }
     return p.models;
   };
 
+  const ollamaConfigured = providers.find((p) => p.id === "ollama")?.configured ?? false;
   const groqConfigured = providers.find((p) => p.id === "groq")?.configured ?? false;
   const googleConfigured = providers.find((p) => p.id === "google")?.configured ?? false;
 
@@ -1151,7 +1188,7 @@ export function TriArena() {
                   </Badge>
                 </div>
                 <p className="text-[11px] text-zinc-400 truncate">
-                  3-Way live comparison (2 Groq + 1 Google AI Studio)
+                  3-Way live comparison (1 Ollama + 1 Groq + 1 Google AI Studio)
                 </p>
               </div>
             </div>
@@ -1160,6 +1197,15 @@ export function TriArena() {
           {/* Top Actions: Provider Badges + Clear IndexedDB */}
           <div className="flex items-center gap-2.5">
             <div className="hidden md:flex items-center gap-2">
+              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs bg-zinc-800/60 border border-zinc-700/60">
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    ollamaConfigured ? "bg-emerald-400 animate-pulse" : "bg-amber-500"
+                  }`}
+                />
+                <span className="text-zinc-300 text-xs font-medium">Ollama</span>
+              </div>
+
               <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs bg-zinc-800/60 border border-zinc-700/60">
                 <span
                   className={`w-2 h-2 rounded-full ${
@@ -1214,6 +1260,7 @@ export function TriArena() {
           }`}
         >
           {columns.map((col, idx) => {
+            const isOllama = col.provider === "ollama";
             const isGroq = col.provider === "groq";
             const availableModels = getModelsForProvider(col.provider);
             const turns = currentSession?.turns || [];
@@ -1246,12 +1293,18 @@ export function TriArena() {
                     <Badge
                       variant="outline"
                       className={`text-[11px] font-semibold tracking-wide shrink-0 ${
-                        isGroq
+                        isOllama
+                          ? "border-violet-500/40 bg-violet-500/10 text-violet-400"
+                          : isGroq
                           ? "border-amber-500/40 bg-amber-500/10 text-amber-400"
                           : "border-blue-500/40 bg-blue-500/10 text-blue-400"
                       }`}
                     >
-                      {isGroq ? `Col ${idx + 1}: Groq` : `Col 3: Google`}
+                      {isOllama
+                        ? `Col 1: Ollama`
+                        : isGroq
+                        ? `Col 2: Groq`
+                        : `Col 3: Google`}
                     </Badge>
 
                     {/* Model Selector Dropdown */}

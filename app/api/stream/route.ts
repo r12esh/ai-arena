@@ -5,15 +5,16 @@
 // ============================================================
 import { NextRequest } from "next/server";
 import { streamModelResponse, ChatMessageParam } from "@/lib/ai-client";
+import { ProviderId } from "@/lib/providers";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { provider, model, prompt, messages } = body;
 
-    if (provider !== "groq" && provider !== "google") {
+    if (provider !== "ollama" && provider !== "groq" && provider !== "google") {
       return Response.json(
-        { error: 'Invalid provider. Must be "groq" or "google".' },
+        { error: 'Invalid provider. Must be "ollama", "groq", or "google".' },
         { status: 400 }
       );
     }
@@ -42,7 +43,11 @@ export async function POST(req: NextRequest) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of streamModelResponse(provider, model, inputData)) {
+          for await (const chunk of streamModelResponse(
+            provider as ProviderId,
+            model,
+            inputData
+          )) {
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`)
             );

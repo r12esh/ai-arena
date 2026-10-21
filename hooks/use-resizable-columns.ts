@@ -52,8 +52,12 @@ export function useResizableColumns(): UseResizableColumnsReturn {
   const containerRef = useRef<HTMLDivElement | null>(null);
   // Always initialize with DEFAULT_RATIOS for matching SSR and initial client render
   const [ratios, setRatios] = useState<[number, number, number]>(DEFAULT_RATIOS);
-  const ratiosRef = useRef<[number, number, number]>(ratios);
-  ratiosRef.current = ratios;
+  const ratiosRef = useRef<[number, number, number]>(DEFAULT_RATIOS);
+
+  // Sync ref with ratios in effect
+  useEffect(() => {
+    ratiosRef.current = ratios;
+  }, [ratios]);
 
   const [isDragging, setIsDragging] = useState(false);
   const [activeHandle, setActiveHandle] = useState<number | null>(null);
@@ -71,8 +75,10 @@ export function useResizableColumns(): UseResizableColumnsReturn {
   useEffect(() => {
     const saved = loadSavedRatios();
     if (saved) {
-      setRatios(saved);
-      applyCssVariables(saved);
+      requestAnimationFrame(() => {
+        setRatios(saved);
+        applyCssVariables(saved);
+      });
     } else {
       applyCssVariables(DEFAULT_RATIOS);
     }

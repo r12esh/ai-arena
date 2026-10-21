@@ -13,7 +13,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "AI Tri-Arena — 3-Model Live Comparison",
   description:
-    "Compare 3 AI models head-to-head (2 Groq + 1 Google AI Studio) in real-time with simultaneous streaming.",
+    "Compare 3 AI models head-to-head (1 Ollama Cloud + 1 Groq + 1 Google AI Studio) in real-time with simultaneous streaming.",
 };
 
 export default function RootLayout({

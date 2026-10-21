@@ -1,29 +1,30 @@
 # AI Tri-Arena — 3-Way AI Model Comparison
 
 A lightweight, high-performance Next.js application for comparing 3 AI models head-to-head in real time:
-- **Column 1:** Groq model (e.g. `llama-3.3-70b-versatile`, `llama-3.1-8b-instant`)
-- **Column 2:** Groq model (e.g. `mixtral-8x7b-32768`, `gemma2-9b-it`)
-- **Column 3:** Google AI Studio model (e.g. `gemini-2.0-flash`, `gemini-1.5-flash`)
+- **Column 1:** Ollama Cloud hosted model (e.g. `llama3.3:70b`, `deepseek-r1:70b`, `deepseek-r1:671b`)
+- **Column 2:** Groq model (e.g. `qwen/qwen3.8-27b`, `openai/gpt-oss-20b`)
+- **Column 3:** Google AI Studio model (e.g. `gemini-3.8-flash`, `gemini-3.5-flash`)
 
-All 3 models stream responses concurrently from a single bottom prompt input with zero database dependency and no history storage.
+All 3 models stream responses concurrently from a single bottom prompt input with offline-first multi-turn history stored directly in client-side IndexedDB.
 
 ---
 
 ## Features
 
 - **3-Way Parallel Streaming:** Submitting one prompt calls all 3 models simultaneously via Server-Sent Events (SSE).
-- **Zero Database / Pure Stateless:** No database, no local storage history, and no saved logs.
+- **Client-Side IndexedDB Multi-Turn History:** Conversations are persisted in IndexedDB with multi-turn context support.
 - **Provider Adapters:**
-  - Groq via OpenAI-compatible Chat Completions
+  - Ollama via hosted cloud OpenAI-compatible Chat Completions (`ollama.com/v1`)
+  - Groq via OpenAI-compatible Chat Completions (`api.groq.com/openai/v1`)
   - Google AI Studio via native Gemini REST SSE streaming
 - **Resilient Columns:** If one model fails or hits quota limits, the other two continue streaming unaffected.
 - **Per-Column Model Switcher:** Switch models for any column on the fly.
 - **Interactive UI:**
   - One bottom prompt composer with auto-expansion, keyboard shortcut (`Enter` to send, `Shift+Enter` for new line)
-  - Quick example prompt starter chips
+  - Resizable columns with keyboard shortcuts and smooth drag interaction
   - Stop button to abort active generations mid-stream
   - Copy response button with feedback toast
-  - Live elapsed time & token/character counters
+  - Live elapsed time counter
 
 ---
 
@@ -31,20 +32,24 @@ All 3 models stream responses concurrently from a single bottom prompt input wit
 
 ### 1. Environment Variables
 
-Create a `.env.local` file in the project root (see `.env.example`):
+Only the `.env` file in the project root is used:
 
 ```bash
-# Groq API Key (Powers Columns 1 & 2)
+# Groq API Configuration (for Column 2 model)
 GROQ_API_KEY=gsk_your_groq_api_key_here
 
-# Google AI Studio API Key (Powers Column 3)
+# Google AI Studio Configuration (for Column 3 model)
 GEMINI_API_KEY=your_gemini_api_key_here
+
+# Ollama API Key (for Column 1 hosted cloud models)
+OLLAMA_API_KEY=your_ollama_api_key_here
 ```
 
-*(Optional model list customizations)*:
+*(Optional model list customizations in `.env`)*:
 ```bash
-GROQ_MODELS=llama-3.3-70b-versatile,llama-3.1-8b-instant,mixtral-8x7b-32768,gemma2-9b-it
-GEMINI_MODELS=gemini-2.0-flash,gemini-1.5-flash,gemini-1.5-pro
+OLLAMA_MODELS=gemma4:31b,gpt-oss:20b,gpt-oss:120b,nemotron-3-nano:30b,nemotron-3-super,minimax-m3.1-flash,beam
+GROQ_MODELS=qwen/qwen3.8-27b,openai/gpt-oss-20b,openai/gpt-oss-120b,allam-2-7b
+GEMINI_MODELS=gemini-3.8-flash,gemini-3.5-flash,gemini-3.6-flash,gemini-4-argon,gemini-3.5-flash-lite
 ```
 
 ### 2. Install & Run
