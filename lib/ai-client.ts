@@ -1,6 +1,6 @@
 // ============================================================
 // Server-only: Multi-provider streaming AI client
-// Supports Ollama Cloud, Groq (OpenAI-compatible) and Google AI Studio (Gemini)
+// Supports Groq (OpenAI-compatible) and Google AI Studio (Gemini)
 // Supports multi-turn conversational context
 // ============================================================
 import "server-only";
@@ -38,9 +38,7 @@ export async function* streamModelResponse(
 
   if (!provider.apiKey || provider.apiKey.trim().length === 0) {
     const envKeyName =
-      providerId === "ollama"
-        ? "OLLAMA_API_KEY"
-        : providerId === "groq"
+      providerId === "groq"
         ? "GROQ_API_KEY"
         : "GEMINI_API_KEY";
     yield {
@@ -64,9 +62,9 @@ export async function* streamModelResponse(
   }
 
   try {
-    if (providerId === "groq" || providerId === "ollama") {
+    if (providerId === "groq") {
       // -------------------------------------------------------------
-      // OpenAI-compatible Chat Completions (Groq & Ollama Cloud)
+      // OpenAI-compatible Chat Completions (Groq)
       // -------------------------------------------------------------
       const res = await fetch(`${provider.baseUrl}/chat/completions`, {
         method: "POST",

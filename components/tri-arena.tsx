@@ -47,14 +47,14 @@ interface ModelOption {
 }
 
 interface ProviderMeta {
-  id: "ollama" | "groq" | "google";
+  id: "groq" | "google";
   name: string;
   configured: boolean;
   models: ModelOption[];
 }
 
 interface LiveColumnState {
-  provider: "ollama" | "groq" | "google";
+  provider: "groq" | "google";
   providerName: string;
   selectedModel: string;
   streamingText: string;
@@ -321,12 +321,12 @@ export function TriArena() {
   const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
   const [isSessionLoading, setIsSessionLoading] = useState(true);
 
-  // 3 Columns Live State: Col 1 = Ollama (Cloud), Col 2 = Groq, Col 3 = Google AI Studio
+  // 3 Columns Live State: Col 1 = Groq, Col 2 = Groq, Col 3 = Google AI Studio
   const [columns, setColumns] = useState<[LiveColumnState, LiveColumnState, LiveColumnState]>([
     {
-      provider: "ollama",
-      providerName: "Ollama (Cloud)",
-      selectedModel: "gemma4:31b",
+      provider: "groq",
+      providerName: "Groq",
+      selectedModel: "openai/gpt-oss-20b",
       streamingText: "",
       status: "idle",
       durationMs: 0,
@@ -371,7 +371,7 @@ export function TriArena() {
       try {
         const res = await fetch("/api/models");
         let initialModels: [string, string, string] = [
-          "gemma4:31b",
+          "openai/gpt-oss-20b",
           "qwen/qwen3.8-27b",
           "gemini-3.5-flash-lite",
         ];
@@ -383,14 +383,13 @@ export function TriArena() {
             fetchedProviders = data.providers;
             setProviders(data.providers);
 
-            const ollama = data.providers.find((p: ProviderMeta) => p.id === "ollama");
             const groq = data.providers.find((p: ProviderMeta) => p.id === "groq");
             const google = data.providers.find((p: ProviderMeta) => p.id === "google");
 
             initialModels = [
-              ollama?.models?.find((m: ModelOption) => m.id === "gemma4:31b")?.id ||
-                ollama?.models?.[0]?.id ||
-                "gemma4:31b",
+              groq?.models?.find((m: ModelOption) => m.id === "openai/gpt-oss-20b")?.id ||
+                groq?.models?.[0]?.id ||
+                "openai/gpt-oss-20b",
               groq?.models?.find((m: ModelOption) => m.id === "qwen/qwen3.8-27b")?.id ||
                 groq?.models?.find((m: ModelOption) => m.id === "openai/gpt-oss-20b")?.id ||
                 groq?.models?.[0]?.id ||
@@ -416,7 +415,6 @@ export function TriArena() {
           setCurrentSessionId(latest.id);
           setCurrentSession(latest);
 
-          const ollamaProvider = fetchedProviders.find((p) => p.id === "ollama");
           const groqProvider = fetchedProviders.find((p) => p.id === "groq");
           const googleProvider = fetchedProviders.find((p) => p.id === "google");
 
@@ -424,7 +422,7 @@ export function TriArena() {
             {
               ...prev[0],
               selectedModel:
-                ollamaProvider?.models?.some((m) => m.id === latest.columnModels?.[0])
+                groqProvider?.models?.some((m) => m.id === latest.columnModels?.[0])
                   ? latest.columnModels[0]
                   : initialModels[0],
             },
@@ -996,24 +994,13 @@ export function TriArena() {
     }
   }, []);
 
-  const getModelsForProvider = (providerId: "ollama" | "groq" | "google") => {
+  const getModelsForProvider = (providerId: "groq" | "google") => {
     const p = providers.find((item) => item.id === providerId);
     if (!p || p.models.length === 0) {
-      if (providerId === "ollama") {
-        return [
-          { id: "gemma4:31b", displayName: "Gemma 4 31B" },
-          { id: "gpt-oss:20b", displayName: "GPT-OSS 20B" },
-          { id: "gpt-oss:120b", displayName: "GPT-OSS 120B" },
-          { id: "nemotron-3-nano:30b", displayName: "Nemotron 3 Nano 30B" },
-          { id: "nemotron-3-super", displayName: "Nemotron 3 Super" },
-          { id: "nemotron-3-ultra", displayName: "Nemotron 3 Ultra" },
-          { id: "beam", displayName: "Beam" },
-        ];
-      }
       if (providerId === "groq") {
         return [
-          { id: "qwen/qwen3.8-27b", displayName: "Qwen 3.8 27B" },
           { id: "openai/gpt-oss-20b", displayName: "GPT-OSS 20B" },
+          { id: "qwen/qwen3.8-27b", displayName: "Qwen 3.8 27B" },
           { id: "openai/gpt-oss-120b", displayName: "GPT-OSS 120B" },
           { id: "allam-2-7b", displayName: "ALLaM 2 7B" },
         ];
@@ -1029,7 +1016,6 @@ export function TriArena() {
     return p.models;
   };
 
-  const ollamaConfigured = providers.find((p) => p.id === "ollama")?.configured ?? false;
   const groqConfigured = providers.find((p) => p.id === "groq")?.configured ?? false;
   const googleConfigured = providers.find((p) => p.id === "google")?.configured ?? false;
 
@@ -1188,7 +1174,7 @@ export function TriArena() {
                   </Badge>
                 </div>
                 <p className="text-[11px] text-zinc-400 truncate">
-                  3-Way live comparison (1 Ollama + 1 Groq + 1 Google AI Studio)
+                  3-Way live comparison (2 Groq + 1 Google AI Studio)
                 </p>
               </div>
             </div>
@@ -1197,15 +1183,6 @@ export function TriArena() {
           {/* Top Actions: Provider Badges + Clear IndexedDB */}
           <div className="flex items-center gap-2.5">
             <div className="hidden md:flex items-center gap-2">
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs bg-zinc-800/60 border border-zinc-700/60">
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    ollamaConfigured ? "bg-emerald-400 animate-pulse" : "bg-amber-500"
-                  }`}
-                />
-                <span className="text-zinc-300 text-xs font-medium">Ollama</span>
-              </div>
-
               <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs bg-zinc-800/60 border border-zinc-700/60">
                 <span
                   className={`w-2 h-2 rounded-full ${
@@ -1260,7 +1237,6 @@ export function TriArena() {
           }`}
         >
           {columns.map((col, idx) => {
-            const isOllama = col.provider === "ollama";
             const isGroq = col.provider === "groq";
             const availableModels = getModelsForProvider(col.provider);
             const turns = currentSession?.turns || [];
@@ -1293,18 +1269,12 @@ export function TriArena() {
                     <Badge
                       variant="outline"
                       className={`text-[11px] font-semibold tracking-wide shrink-0 ${
-                        isOllama
-                          ? "border-violet-500/40 bg-violet-500/10 text-violet-400"
-                          : isGroq
+                        isGroq
                           ? "border-amber-500/40 bg-amber-500/10 text-amber-400"
                           : "border-blue-500/40 bg-blue-500/10 text-blue-400"
                       }`}
                     >
-                      {isOllama
-                        ? `Col 1: Ollama`
-                        : isGroq
-                        ? `Col 2: Groq`
-                        : `Col 3: Google`}
+                      {isGroq ? `Col ${idx + 1}: Groq` : `Col 3: Google`}
                     </Badge>
 
                     {/* Model Selector Dropdown */}

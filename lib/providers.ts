@@ -5,7 +5,7 @@
 import "server-only";
 import "./env"; // Strictly load from root .env file
 
-export type ProviderId = "ollama" | "groq" | "google";
+export type ProviderId = "groq" | "google";
 
 export interface ModelInfo {
   id: string;
@@ -36,17 +36,9 @@ function parseModelList(
     const trimmed = m.trim();
     let displayName = trimmed;
 
-    // Ollama Cloud Models (Free tier supported)
-    if (trimmed === "gemma4:31b" || trimmed === "gemma4:31b-cloud") displayName = "Gemma 4 31B";
-    else if (trimmed === "gpt-oss:20b") displayName = "GPT-OSS 20B";
-    else if (trimmed === "gpt-oss:120b") displayName = "GPT-OSS 120B";
-    else if (trimmed === "nemotron-3-nano:30b") displayName = "Nemotron 3 Nano 30B";
-    else if (trimmed === "nemotron-3-super") displayName = "Nemotron 3 Super";
-    else if (trimmed === "nemotron-3-ultra") displayName = "Nemotron 3 Ultra";
-    else if (trimmed === "beam") displayName = "Beam";
     // Groq Models
+    if (trimmed.includes("gpt-oss-20b")) displayName = "GPT-OSS 20B";
     else if (trimmed.includes("gpt-oss-120b")) displayName = "GPT-OSS 120B";
-    else if (trimmed.includes("gpt-oss-20b")) displayName = "GPT-OSS 20B";
     else if (trimmed.includes("qwen3.8-27b")) displayName = "Qwen 3.8 27B";
     else if (trimmed.includes("allam-2-7b")) displayName = "ALLaM 2 7B";
     // Google Gemini Models
@@ -61,23 +53,11 @@ function parseModelList(
 }
 
 export function getProviders(): ServerProviderConfig[] {
-  // Ollama Cloud (powers Column 1)
-  const ollamaKey = process.env.OLLAMA_API_KEY;
-  const ollamaModels = parseModelList(process.env.OLLAMA_MODELS, [
-    { id: "gemma4:31b", displayName: "Gemma 4 31B" },
-    { id: "gpt-oss:20b", displayName: "GPT-OSS 20B" },
-    { id: "gpt-oss:120b", displayName: "GPT-OSS 120B" },
-    { id: "nemotron-3-nano:30b", displayName: "Nemotron 3 Nano 30B" },
-    { id: "nemotron-3-super", displayName: "Nemotron 3 Super" },
-    { id: "nemotron-3-ultra", displayName: "Nemotron 3 Ultra" },
-    { id: "beam", displayName: "Beam" },
-  ]);
-
-  // Groq (powers Column 2)
+  // Groq (powers Column 1 and Column 2)
   const groqKey = process.env.GROQ_API_KEY;
   const groqModels = parseModelList(process.env.GROQ_MODELS, [
-    { id: "qwen/qwen3.8-27b", displayName: "Qwen 3.8 27B" },
     { id: "openai/gpt-oss-20b", displayName: "GPT-OSS 20B" },
+    { id: "qwen/qwen3.8-27b", displayName: "Qwen 3.8 27B" },
     { id: "openai/gpt-oss-120b", displayName: "GPT-OSS 120B" },
     { id: "allam-2-7b", displayName: "ALLaM 2 7B" },
   ]);
@@ -99,13 +79,6 @@ export function getProviders(): ServerProviderConfig[] {
   );
 
   return [
-    {
-      id: "ollama",
-      name: "Ollama (Cloud)",
-      baseUrl: process.env.OLLAMA_BASE_URL || "https://ollama.com/v1",
-      apiKey: ollamaKey,
-      models: ollamaModels,
-    },
     {
       id: "groq",
       name: "Groq",

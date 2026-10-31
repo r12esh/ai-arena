@@ -12,9 +12,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { provider, model, prompt, messages } = body;
 
-    if (provider !== "ollama" && provider !== "groq" && provider !== "google") {
+    if (provider !== "groq" && provider !== "google") {
       return Response.json(
-        { error: 'Invalid provider. Must be "ollama", "groq", or "google".' },
+        { error: 'Invalid provider. Must be "groq" or "google".' },
         { status: 400 }
       );
     }
